@@ -2,6 +2,7 @@ import Data.Array
 import Data.Char (chr)
 
 type Index = Int
+
 type Depth = Int
 
 data Brain = Brain
@@ -36,7 +37,7 @@ run array brain
   | arrayIndex brain > length array - 1 = putChar '\0'
   -- memoryIndex is not negative
   | memoryIndex brain < 0 = putStrLn "Runtime error: Jumped beyond list bounds"
-  | otherwise  = do
+  | otherwise = do
       let token = array ! arrayIndex brain
       case token of
         '+' -> run array (brain {pointer = pointer brain + 1, arrayIndex = arrayIndex brain + 1})
@@ -51,7 +52,8 @@ run array brain
                   pointer = memory brain !! nextMemoryIndex
                 }
             )
-            where nextMemoryIndex = memoryIndex brain + 1
+          where
+            nextMemoryIndex = memoryIndex brain + 1
         '<' ->
           run
             array
@@ -60,10 +62,10 @@ run array brain
                   memoryIndex = prevMemoryIndex,
                   arrayIndex = arrayIndex brain + 1,
                   pointer = memory brain !! prevMemoryIndex
-
                 }
             )
-            where prevMemoryIndex = memoryIndex brain - 1
+          where
+            prevMemoryIndex = memoryIndex brain - 1
         '.' -> do
           putChar $ chr (pointer brain)
           run array (brain {arrayIndex = arrayIndex brain + 1})
@@ -77,39 +79,34 @@ run array brain
           _ -> do
             let depth = 1
             jumpBackward array brain depth
-        '\n' -> run array brain
 
 jumpForward :: Array Int Char -> Brain -> Depth -> IO ()
 jumpForward array brain depth
   | arrayIndex brain >= length array = putStrLn "Runtime error: Jumped beyond array bounds"
   | depth == 0 = run array brain
   | otherwise =
-    let
-      nextIndex = arrayIndex brain + 1
-      nextToken = array ! nextIndex
-      newDepth = case nextToken of
-                    '[' -> depth + 1
-                    ']' -> depth - 1
-                    _   -> depth
-      newBrain = brain { arrayIndex = nextIndex }
-    in jumpForward array newBrain newDepth
+      let nextIndex = arrayIndex brain + 1
+          nextToken = array ! nextIndex
+          newDepth = case nextToken of
+            '[' -> depth + 1
+            ']' -> depth - 1
+            _ -> depth
+          newBrain = brain {arrayIndex = nextIndex}
+       in jumpForward array newBrain newDepth
 
 jumpBackward :: Array Int Char -> Brain -> Depth -> IO ()
 jumpBackward array brain depth
   | arrayIndex brain < 0 = putStrLn "Runtime error: Jumped beyond array bounds"
   | depth == 0 = run array brain
   | otherwise =
-    let
-      prevIndex = arrayIndex brain - 1
-      prevToken = array ! prevIndex
-      newDepth = case prevToken of
-                    ']' -> depth + 1
-                    '[' -> depth - 1
-                    _   -> depth
-      newBrain = brain { arrayIndex = prevIndex }
-    in jumpBackward array newBrain newDepth
-
-
+      let prevIndex = arrayIndex brain - 1
+          prevToken = array ! prevIndex
+          newDepth = case prevToken of
+            ']' -> depth + 1
+            '[' -> depth - 1
+            _ -> depth
+          newBrain = brain {arrayIndex = prevIndex}
+       in jumpBackward array newBrain newDepth
 
 main :: IO ()
 main = do
