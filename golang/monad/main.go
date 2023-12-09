@@ -27,7 +27,7 @@ func doPrint(s string) IOMonad {
 }
 
 // Bindは、IOMonadを実行し、その結果を別のIOMonadにバインド（適用）する関数です。
-func Bind(m IOMonad, f func(string) IOMonad) IOMonad {
+func bind(m IOMonad, f func(string) IOMonad) IOMonad {
 	input := m()
 	result := f(input)
 	return result
@@ -35,6 +35,6 @@ func Bind(m IOMonad, f func(string) IOMonad) IOMonad {
 
 func main() {
 	// Bindで連結することで、時間依存のない標準入力と標準出力を実現できます。
-	action := Bind(doInput(), doPrint)
+	action := bind(doInput(), doPrint)
 	action()
 }
