@@ -16,7 +16,19 @@ import (
 var db *sql.DB
 
 func TestMain(m *testing.M) {
-	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
+	var cleanup func()
+	var err error
+	db, cleanup, err = setupDatabase()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cleanup()
+
+	code := m.Run()
+	os.Exit(code)
+}
+
+func setupDatabase() (*sql.DB, func(), error) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		log.Fatalf("Could not construct pool: %s", err)
@@ -72,14 +84,14 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
-	code := m.Run()
-
-	// You can't defer this because os.Exit doesn't care for defer
-	if err := pool.Purge(resource); err != nil {
-		log.Fatalf("Could not purge resource: %s", err)
+	// リソースのクリーンアップ関数
+	cleanup := func() {
+		if err := pool.Purge(resource); err != nil {
+			log.Printf("Could not purge resource: %v", err)
+		}
 	}
 
-	os.Exit(code)
+	return db, cleanup, nil
 }
 
 func TestSomething(t *testing.T) {
