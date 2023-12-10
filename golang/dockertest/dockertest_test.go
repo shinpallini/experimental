@@ -10,6 +10,7 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"github.com/stretchr/testify/require"
 )
 
 var db *sql.DB
@@ -56,6 +57,16 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			return err
 		}
+		createTableSQL := `
+		CREATE TABLE dbo.Users (
+			ID int PRIMARY KEY,
+			Name nvarchar(100),
+			Email nvarchar(100)
+		);`
+		_, err = db.Exec(createTableSQL)
+		if err != nil {
+			return err
+		}
 		return db.Ping()
 	}); err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
@@ -72,5 +83,10 @@ func TestMain(m *testing.M) {
 }
 
 func TestSomething(t *testing.T) {
-	db.Ping()
+	var tableName string
+	err := db.QueryRow("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Users'").Scan(&tableName)
+
+	require.NoError(t, err)
+	t.Log("tableName: ", tableName)
+	require.Equal(t, "Users", tableName, "Table dbo.Users does not exist")
 }
