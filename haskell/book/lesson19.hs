@@ -23,3 +23,10 @@ getDrawerContents ids catalog = map (\x -> Map.lookup x catalog) ids
 
 availableOrgans :: [Maybe Organ]
 availableOrgans = getDrawerContents possibleDrawers organCatalog
+
+countOrgan :: Organ -> [Maybe Organ] -> Int
+countOrgan organ availavle =
+  length $
+    filter
+      (\mx -> mx == Just organ)
+      availavle
