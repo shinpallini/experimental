@@ -1,8 +1,9 @@
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
+use serde::Deserialize;
 
-use actix_web::{get, web, App, HttpResponse, HttpServer, ResponseError};
+use actix_web::{get, http::header, post, web, App, HttpResponse, HttpServer, ResponseError};
 use askama::Template;
 use thiserror::Error;
 
@@ -29,6 +30,16 @@ enum MyError {
 
 impl ResponseError for MyError {}
 
+#[derive(Deserialize)]
+struct AddParams {
+    text: String,
+}
+
+#[derive(Deserialize)]
+struct DeleteParams {
+    id: u32,
+}
+
 #[get("/")]
 async fn index(db: web::Data<Pool<SqliteConnectionManager>>) -> Result<HttpResponse, MyError> {
     let conn = db.get()?;
@@ -36,7 +47,7 @@ async fn index(db: web::Data<Pool<SqliteConnectionManager>>) -> Result<HttpRespo
     let rows = statement.query_map(params![], |row| {
         let id = row.get(0)?;
         let text = row.get(1)?;
-        Ok(TodoEntry {id, text})
+        Ok(TodoEntry { id, text })
     })?;
     let mut entries = Vec::new();
     for row in rows {
@@ -47,6 +58,30 @@ async fn index(db: web::Data<Pool<SqliteConnectionManager>>) -> Result<HttpRespo
     Ok(HttpResponse::Ok()
         .content_type("text/html")
         .body(response_body))
+}
+
+#[post("/add")]
+async fn add_todo(
+    params: web::Form<AddParams>,
+    db: web::Data<r2d2::Pool<SqliteConnectionManager>>,
+) -> Result<HttpResponse, MyError> {
+    let conn = db.get()?;
+    conn.execute("INSERT INTO todo (text) VALUES (?)", &[&params.text])?;
+    Ok(HttpResponse::SeeOther()
+        .header(header::LOCATION, "/")
+        .finish())
+}
+
+#[post("/delete")]
+async fn delete_todo(
+    params: web::Form<DeleteParams>,
+    db: web::Data<r2d2::Pool<SqliteConnectionManager>>,
+) -> Result<HttpResponse, MyError> {
+    let conn = db.get()?;
+    conn.execute("DELETE FROM todo WHERE id=?", &[&params.id])?;
+    Ok(HttpResponse::SeeOther()
+        .header(header::LOCATION, "/")
+        .finish())
 }
 
 #[actix_web::main]
@@ -62,10 +97,17 @@ async fn main() -> Result<(), actix_web::Error> {
             text TEXT NOT NULL
         );",
         params![],
-    ).expect("Failed to create a table `todo`.");
-    HttpServer::new(move || App::new().service(index).data(pool.clone()))
-        .bind("0.0.0.0:8080")?
-        .run()
-        .await?;
+    )
+    .expect("Failed to create a table `todo`.");
+    HttpServer::new(move || {
+        App::new()
+            .service(index)
+            .service(add_todo)
+            .service(delete_todo)
+            .data(pool.clone())
+    })
+    .bind("0.0.0.0:8080")?
+    .run()
+    .await?;
     Ok(())
 }
