@@ -3,3 +3,4 @@ csharp/**/bin
 scrap/network-study
 
 rust/**/target
+rust/**/*.csv
