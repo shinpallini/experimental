@@ -4,3 +4,5 @@ scrap/network-study
 
 rust/**/target
 rust/**/*.csv
+
+python/**/*.csv
