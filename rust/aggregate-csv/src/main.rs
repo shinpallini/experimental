@@ -1,9 +1,9 @@
-use std::fs::File;
-use std::io::{BufReader, Read};
 use encoding_rs::*;
 use encoding_rs_io::DecodeReaderBytesBuilder;
 use polars::prelude::*;
+use std::fs::File;
 use std::io::Cursor;
+use std::io::{BufReader, Read};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Shift-JISエンコードされたCSVファイルを開く
@@ -24,7 +24,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .has_header(true)
         .finish()?;
 
-    println!("{:?}", df);
+    #[allow(deprecated)]
+    let output_df = df
+        .group_by(["大項目", "中項目", "内容"])?
+        .select(["金額（円）"])
+        .sum()?;
+
+    // println!("{:?}", df);
+    println!("{:?}", output_df.to_string());
 
     Ok(())
 }
